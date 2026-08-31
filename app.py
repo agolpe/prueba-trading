@@ -106,13 +106,14 @@ if resultados_globales:
         acc_t2 = round(capital_usd / info["p2"])
         ganancia_est = capital_total * (objetivo_rendimiento / 100.0)
         
+        # Eliminamos asteriscos y formateos complejos que rompen el bot
         if z_verificar > 2.0:
-            msg = f"🚨 *ALERTA DE TRADING IA ACTIVADA*\n\nEl par *{par}* se ha desviado a un Z-Score crítico de *{z_verificar:.2f}*.\n\n🔴 CORTO {acc_t1} de {info['t1']}\n🟢 LARGO {acc_t2} de {info['t2']}\n\n🎯 *Target:* +{ganancia_est:.2f}€ | ⚠️ *Stop Loss:* Z=3.50"
+            msg = f"ALERTA TRADING IA: El par {par} se ha desviado a un Z-Score de {z_verificar:.2f}. PLAN: CORTO {acc_t1} de {info['t1']} y LARGO {acc_t2} de {info['t2']}. Objetivo de ganancia: +{ganancia_est:.2f} EUR. Stop Loss critico en Z=3.50."
             enviar_alerta_automatica_telegram(msg)
             st.error(f"🚨 ALERTA ENVIADA: {par}")
             
         elif z_verificar < -2.0:
-            msg = f"🚨 *ALERTA DE TRADING IA ACTIVADA*\n\nEl par *{par}* se ha desviado a un Z-Score crítico de *{z_verificar:.2f}*.\n\n🟢 LARGO {acc_t1} de {info['t1']}\n🔴 CORTO {acc_t2} de {info['t2']}\n\n🎯 *Target:* +{ganancia_est:.2f}€ | ⚠️ *Stop Loss:* Z=-3.50"
+            msg = f"ALERTA TRADING IA: El par {par} se ha desviado a un Z-Score de {z_verificar:.2f}. PLAN: LARGO {acc_t1} de {info['t1']} y CORTO {acc_t2} de {info['t2']}. Objetivo de ganancia: +{ganancia_est:.2f} EUR. Stop Loss critico en Z=-3.50."
             enviar_alerta_automatica_telegram(msg)
             st.success(f"🟢 ALERTA ENVIADA: {par}")
             
@@ -125,6 +126,6 @@ if resultados_globales:
 else:
     st.warning("Buscando ineficiencias... Todo el sector IA se mantiene en equilibrio en esta hora.")
 
-# === TEST FORZADO AUTOMÁTICO DE CONFIRMACIÓN ===
-# Borraremos estas dos líneas de abajo una vez que compruebes que suena tu móvil
-enviar_alerta_automatica_telegram("🚀 ¡Prueba de Red Exitosa! El servidor y tu Telegram están vinculados sin errores.")
+# === TEST FORZADO DE CONFIRMACIÓN EN TEXTO PLANO ===
+# Este mensaje plano llegará al instante sin bloqueos de diseño
+enviar_alerta_automatica_telegram("Mensaje de prueba exitoso: El sistema en la nube esta mandando datos directamente a tu movil de forma correcta.")
