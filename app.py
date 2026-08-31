@@ -112,13 +112,16 @@ else:
     st.warning("Buscando ineficiencias... Todo el sector IA se mantiene en equilibrio en esta hora.")
 # === LÍNEA TEMPORAL DE PRUEBA FORZADA ===
 # Forzamos una simulación real de orden para verificar tu móvil
-enviar_alerta_automatica_telegram(
-    "🚨 *SIMULACIÓN DE ORDEN IA EXCELENTE*\n\n"
-    "¡El canal automático en la nube funciona al 100%!\n\n"
-    "*Plan de inversión para tus 1,000€:*\n"
-    "🟢 COMPRAR 65 acciones de IREN\n"
-    "🔴 VENDER CORTO 120 acciones de CIFR\n\n"
-    "🎯 *Objetivo:* +100.00€ (Z=0)\n"
-    "⚠️ *Stop Loss:* Z = -3.50"
-)
-st.sidebar.success("✅ ¡Mensaje de prueba enviado a Telegram!")
+def enviar_alerta_automatica_telegram(mensaje):
+    token = "8948061031:AAF-hZXlXcoolKy9QZAwj2_gLTMr_GOWjZU"
+    chat_id = "399072608"
+    url = f"https://telegram.org{token}/sendMessage"
+    payload = {"chat_id": str(chat_id), "text": mensaje, "parse_mode": "Markdown"}
+    
+    # Quitamos el silencio para ver el error real en la pantalla de Streamlit
+    response = requests.post(url, data=payload, timeout=10)
+    st.write("Código de respuesta Telegram:", response.status_code)
+    st.write("Respuesta:", response.text)
+
+# Ejecutamos la prueba directa al cargar
+enviar_alerta_automatica_telegram("Prueba de diagnóstico de conexión")
