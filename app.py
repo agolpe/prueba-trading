@@ -110,3 +110,15 @@ if resultados_globales:
         st.line_chart(df_g)
 else:
     st.warning("Buscando ineficiencias... Todo el sector IA se mantiene en equilibrio en esta hora.")
+# === LÍNEA TEMPORAL DE PRUEBA FORZADA ===
+# Forzamos una simulación real de orden para verificar tu móvil
+enviar_alerta_automatica_telegram(
+    "🚨 *SIMULACIÓN DE ORDEN IA EXCELENTE*\n\n"
+    "¡El canal automático en la nube funciona al 100%!\n\n"
+    "*Plan de inversión para tus 1,000€:*\n"
+    "🟢 COMPRAR 65 acciones de IREN\n"
+    "🔴 VENDER CORTO 120 acciones de CIFR\n\n"
+    "🎯 *Objetivo:* +100.00€ (Z=0)\n"
+    "⚠️ *Stop Loss:* Z = -3.50"
+)
+st.sidebar.success("✅ ¡Mensaje de prueba enviado a Telegram!")
