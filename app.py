@@ -66,23 +66,22 @@ if st.sidebar.button("🚀 INICIAR ESCANEO SECTORIAL"):
                     
                     log_precios = np.log(df_par)
                     
-                    # Ejecutamos el Test de Cointegración de Johansen
+                    # Ejecutamos el Test de Cointegration de Johansen
                     res_joh = coint_johansen(log_precios, det_order=0, k_ar_diff=1)
-                    estadistico_traza = res_joh.lr1[0]
+                    estadistico_traza = res_joh.lr1
                     
                     # FILTRO DINÁMICO DE CONFIANZA ECONOMÉTRICA
-                    # 95% para Datos Diarios (Estricto), 90% para datos intradiarios (Flexible ante el ruido)
                     if tf == "1d":
-                        valor_critico = res_joh.cvt[0, 1]  # Confianza al 95%
+                        valor_critico = res_joh.cvt  # Confianza al 95%
                         criterio_texto = "95% Confianza (Macro)"
                     else:
-                        valor_critico = res_joh.cvt[0, 0]  # Confianza al 90%
+                        valor_critico = res_joh.cvt  # Confianza al 90%
                         criterio_texto = "90% Confianza (Intradía)"
                         
                     esta_coint = estadistico_traza > valor_critico
                     
                     if esta_coint:
-                        # Coordenadas matriciales fijas e indexadas para evitar cruces de datos
+                        # Coordenadas matriciales fijas e indexadas
                         beta_t1 = float(res_joh.evec[0, 0])
                         beta_t2 = float(res_joh.evec[1, 0])
                         
@@ -122,7 +121,7 @@ if st.sidebar.button("🚀 INICIAR ESCANEO SECTORIAL"):
                     info = diccionario_detalles[par_elegido]
                     z_grafico = diccionario_spreads[par_elegido]
                     
-                    # Cálculo neutral monetario (€ a USD aproximado)
+                    # Cálculo neutral monetario (€ a USD)
                     capital_usd = (capital_total / 2.0) * 1.10
                     acciones_t1 = round(capital_usd / info["p1"])
                     acciones_t2 = round(capital_usd / info["p2"])
@@ -157,5 +156,20 @@ if st.sidebar.button("🚀 INICIAR ESCANEO SECTORIAL"):
                         
                         url_tel = f"https://telegram.org{token_bot}/sendMessage?chat_id={chat_id_usuario}&text=🚨 ORDEN SUGERIDA: {plan_texto}"
                         st.link_button("📲 ENVIAR PLAN DE TRADING AL MÓVIL", url_tel)
-                    else:plan_texto = f"El par {par_elegido} está balanceado en este horizonte ({frecuencia}). No hay distorsiones arbitrales.
-                    "st.info(f"⚖️ POSICIÓN: ESPERANDO MOVIMIENTO DE BANDAS")st.write(f"Para obtener el {objetivo_rendimiento}% de beneficio al regresar al centro (Z=0), el plan neutral asignará {acciones_t1} acciones de {info['t1']} y {acciones_t2} acciones de {info['t2']}.")url_tel = f"telegram.org{token_bot}/sendMessage?chat_id={chat_id_usuario}&text=🔔 Reporte de Control ({frecuencia}): {par_elegido} equilibrado en Z={info['z']:.2f}"st.link_button("📲 ENVIAR REPORTE DE CONTROL AL MÓVIL", url_tel)# 5. Dibujo del Gráfico Históricost.subheader(f"📈 Gráfico de Control Histórico ({frecuencia})")df_grafico = pd.DataFrame({"Z-Score del Spread": z_grafico}, index=precios_totales.index)st.line_chart(df_grafico)else:st.warning("No se detectaron pares válidos que superen los criterios de cointegración elegidos en este periodo.")else:st.error("Error al descargar el histórico desde los servidores financieros de Yahoo Finance.")
+                        
+                    else:
+                        plan_texto = f"El par {par_elegido} está balanceado en este horizonte ({frecuencia}). No hay distorsiones arbitrales."
+                        st.info(f"⚖️ POSICIÓN: ESPERANDO MOVIMIENTO DE BANDAS")
+                        st.write(f"Para obtener el {objetivo_rendimiento}% de beneficio al regresar al centro (Z=0), el plan neutral asignará {acciones_t1} acciones de {info['t1']} y {acciones_t2} acciones de {info['t2']}.")
+                        
+                        url_tel = f"https://telegram.org{token_bot}/sendMessage?chat_id={chat_id_usuario}&text=🔔 Reporte de Control ({frecuencia}): {par_elegido} equilibrado en Z={info['z']:.2f}"
+                        st.link_button("📲 ENVIAR REPORTE DE CONTROL AL MÓVIL", url_tel)
+                        
+                    # 5. Dibujo del Gráfico Histórico
+                    st.subheader(f"📈 Gráfico de Control Histórico ({frecuencia})")
+                    df_grafico = pd.DataFrame({"Z-Score del Spread": z_grafico}, index=precios_totales.index)
+                    st.line_chart(df_grafico)
+            else:
+                st.warning("No se detectaron pares válidos que superen los criterios de cointegración elegidos en este periodo.")
+        else:
+            st.error("Error al descargar el histórico desde los servidores financieros de Yahoo Finance.")
