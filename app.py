@@ -20,25 +20,21 @@ capital_total = st.sidebar.number_input("Capital total (€):", min_value=100, v
 objetivo_rendimiento = st.sidebar.slider("Objetivo Ganancia (%)", 1, 20, 10)
 
 def enviar_alerta_automatica_telegram(mensaje):
-    """Réplica exacta del navegador web usando requests.get para saltar bloqueos"""
-    token_seguro = "8948061031:AAF-hZXlXcoolKy9QZAwj2_gLTMr_GOWjZU"
-    chat_id_seguro = "399072608"
+    token = "8948061031:AAF-hZXlXcoolKy9QZAwj2_gLTMr_GOWjZU"
+    chat_id = "399072608"
+    texto = requests.utils.quote(mensaje)
     
-    # Codificamos el texto para que los espacios no rompan la URL
-    texto_codificado = requests.utils.quote(mensaje)
-    
-    # Construcción limpia de la URL de la API de Telegram
-    url_final = f"https://telegram.org{token_seguro}/sendMessage?chat_id={chat_id_seguro}&text={texto_codificado}"
+    # Dirección web escrita sin fallos de unión
+    url_correcta = "https://telegram.org" + token + "/sendMessage?chat_id=" + chat_id + "&text=" + texto
     
     try:
-        headers = {"User-Agent": "Mozilla/5.0"}
-        response = requests.get(url_final, headers=headers, timeout=15)
-        if response.status_code == 200:
-            st.sidebar.success("📢 ¡Mensaje enviado con éxito!")
+        res = requests.get(url_correcta, timeout=10)
+        if res.status_code == 200:
+            st.sidebar.success("¡Mensaje enviado!")
         else:
-            st.sidebar.error(f"Telegram rechazó los datos: {response.text}")
+            st.sidebar.error("Error: " + res.text)
     except Exception as e:
-        st.sidebar.error(f"Fallo de conexión en red: {e}")
+        st.sidebar.error("Fallo: " + str(e))
 
 # Ejecución continua en datos intradiarios de 1 hora
 tf, per = "60m", "60d"
