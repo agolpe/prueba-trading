@@ -92,7 +92,7 @@ if resultados_globales:
         ganancia_est = capital_total * (objetivo_rendimiento / 100.0)
         
         # Si el spread se sale de los márgenes (>2), el bot te manda un mensaje de inmediato
-        if z_verificar > 2.0:
+        if z_verificar > 0.0:
             msg = f"🚨 *ALERTA DE TRADING IA ACTIVADA*\n\nEl par *{par}* se ha desviado a un Z-Score crítico de *{z_verificar:.2f}*.\n\n*Plan de Acción Directo:*\n🔴 VENDER EN CORTO {acc_t1} acciones de {info['t1']}\n🟢 COMPRAR {acc_t2} acciones de {info['t2']}\n\n🎯 *Objetivo:* +{ganancia_est:.2f}€ (Cierre en Z=0)\n⚠️ *Stop Loss definitivo:* Z=3.50"
             enviar_alerta_automatica_telegram(msg)
             st.error(f"🚨 ALERTA DISPARADA EN: {par}")
