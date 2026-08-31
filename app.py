@@ -20,15 +20,29 @@ capital_total = st.sidebar.number_input("Capital total (€):", min_value=100, v
 objetivo_rendimiento = st.sidebar.slider("Objetivo Ganancia (%)", 1, 20, 10)
 
 def enviar_alerta_automatica_telegram(mensaje):
-    """Manda notificaciones directamente al móvil saltándose el sandbox de Streamlit"""
+    """Manda notificaciones al móvil con una estructura de URL blindada contra errores de sintaxis"""
+    # Separamos el prefijo 'bot' del código para evitar errores de interpretación del servidor
     token = "8948061031:AAF-hZXlXcoolKy9QZAwj2_gLTMr_GOWjZU"
     chat_id = "399072608"
-    url = f"https://telegram.org{token}/sendMessage"
+    
+    # Construcción limpia de la URL sin caracteres cruzados
+    url_base = "https://telegram.org"
+    url_final = url_base + "/bot" + token + "/sendMessage"
+    
     payload = {"chat_id": str(chat_id), "text": mensaje, "parse_mode": "Markdown"}
+    
     try:
-        requests.post(url, data=payload, timeout=10)
-    except:
-        pass
+        # Añadimos un agente de usuario estándar para que parezca una petición web normal de navegador
+        headers = {"User-Agent": "Mozilla/5.0"}
+        response = requests.post(url_final, data=payload, headers=headers, timeout=15)
+        
+        # Mostramos el diagnóstico de éxito en la barra lateral en silencio para validar
+        if response.status_code == 200:
+            st.sidebar.success("📢 Mensaje enviado con éxito")
+        else:
+            st.sidebar.error(f"Telegram rechazó los datos: {response.text}")
+    except Exception as e:
+        st.sidebar.error(f"Error de red: {e}")
 
 # Ejecución continua en datos intradiarios de 1 hora
 tf, per = "60m", "60d"
@@ -56,9 +70,9 @@ if not datos.empty:
             
             res_joh = coint_johansen(log_precios, det_order=0, k_ar_diff=1)
             
-            # --- CORRECCIÓN DEFINITIVA DE INDEXACIÓN (Rango r=0) ---
-            estadistico_traza = float(res_joh.lr1[0]) # Tomamos el primer elemento del array
-            valor_critico = float(res_joh.cvt[0, 0])   # Fila 0 (r=0), Columna 0 (90% Confianza)
+            # Extraemos de forma matemática estricta usando posiciones
+            estadistico_traza = float(res_joh.lr1[0]) 
+            valor_critico = float(res_joh.cvt[0, 0])   # Confianza al 90% intradiario
             
             if estadistico_traza > valor_critico:
                 beta_t1 = float(res_joh.evec[0, 0])
@@ -78,12 +92,13 @@ if not datos.empty:
                     "p1": float(df_par[t1].iloc[-1]), "p2": float(df_par[t2].iloc[-1]),
                     "t1": t1, "t2": t2, "z": z_actual, "index": precios_totales.index
                 }
+
 if resultados_globales:
     st.subheader("📊 Estado de las Oportunidades Actuales (Auto-Refresh)")
     df_ranking = pd.DataFrame(resultados_globales).sort_values(by="Fuerza", ascending=False).set_index("Par")
     st.dataframe(df_ranking)
     
-    # PROCESAMIENTO SILENCIOSO DE ALERTAS CRÍTICAS
+    # Procesamiento pasivo automático de alertas críticas
     for par, info in diccionario_detalles.items():
         z_verificar = info["z"]
         capital_usd = (capital_total / 2.0) * 1.10
@@ -91,18 +106,17 @@ if resultados_globales:
         acc_t2 = round(capital_usd / info["p2"])
         ganancia_est = capital_total * (objetivo_rendimiento / 100.0)
         
-        # Si el spread se sale de los márgenes (>2), el bot te manda un mensaje de inmediato
-        if z_verificar > 0.0:
-            msg = f"🚨 *ALERTA DE TRADING IA ACTIVADA*\n\nEl par *{par}* se ha desviado a un Z-Score crítico de *{z_verificar:.2f}*.\n\n*Plan de Acción Directo:*\n🔴 VENDER EN CORTO {acc_t1} acciones de {info['t1']}\n🟢 COMPRAR {acc_t2} acciones de {info['t2']}\n\n🎯 *Objetivo:* +{ganancia_est:.2f}€ (Cierre en Z=0)\n⚠️ *Stop Loss definitivo:* Z=3.50"
+        if z_verificar > 2.0:
+            msg = f"🚨 *ALERTA DE TRADING IA ACTIVADA*\n\nEl par *{par}* se ha desviado a un Z-Score crítico de *{z_verificar:.2f}*.\n\n🔴 CORTO {acc_t1} de {info['t1']}\n🟢 LARGO {acc_t2} de {info['t2']}\n\n🎯 *Target:* +{ganancia_est:.2f}€ | ⚠️ *Stop Loss:* Z=3.50"
             enviar_alerta_automatica_telegram(msg)
-            st.error(f"🚨 ALERTA DISPARADA EN: {par}")
+            st.error(f"🚨 ALERTA ENVIADA: {par}")
             
         elif z_verificar < -2.0:
-            msg = f"🚨 *ALERTA DE TRADING IA ACTIVADA*\n\nEl par *{par}* se ha desviado a un Z-Score crítico de *{z_verificar:.2f}*.\n\n*Plan de Acción Directo:*\n🟢 COMPRAR {acc_t1} acciones de {info['t1']}\n🔴 VENDER EN CORTO {acc_t2} acciones de {info['t2']}\n\n🎯 *Objetivo:* +{ganancia_est:.2f}€ (Cierre en Z=0)\n⚠️ *Stop Loss definitivo:* Z=-3.50"
+            msg = f"🚨 *ALERTA DE TRADING IA ACTIVADA*\n\nEl par *{par}* se ha desviado a un Z-Score crítico de *{z_verificar:.2f}*.\n\n🟢 LARGO {acc_t1} de {info['t1']}\n🔴 CORTO {acc_t2} de {info['t2']}\n\n🎯 *Target:* +{ganancia_est:.2f}€ | ⚠️ *Stop Loss:* Z=-3.50"
             enviar_alerta_automatica_telegram(msg)
-            st.success(f"🟢 ALERTA DISPARADA EN: {par}")
+            st.success(f"🟢 ALERTA ENVIADA: {par}")
             
-    # Visor gráfico de control manual de apoyo
+    # Visor gráfico manual de apoyo
     st.subheader("🔎 Visor de Control Gráfico")
     par_sel = st.selectbox("Selecciona un par para ver su histórico intradiario:", list(diccionario_spreads.keys()))
     if par_sel:
@@ -110,18 +124,7 @@ if resultados_globales:
         st.line_chart(df_g)
 else:
     st.warning("Buscando ineficiencias... Todo el sector IA se mantiene en equilibrio en esta hora.")
-# === LÍNEA TEMPORAL DE PRUEBA FORZADA ===
-# Forzamos una simulación real de orden para verificar tu móvil
-def enviar_alerta_automatica_telegram(mensaje):
-    token = "8948061031:AAF-hZXlXcoolKy9QZAwj2_gLTMr_GOWjZU"
-    chat_id = "399072608"
-    url = f"https://telegram.org{token}/sendMessage"
-    payload = {"chat_id": str(chat_id), "text": mensaje, "parse_mode": "Markdown"}
-    
-    # Quitamos el silencio para ver el error real en la pantalla de Streamlit
-    response = requests.post(url, data=payload, timeout=10)
-    st.write("Código de respuesta Telegram:", response.status_code)
-    st.write("Respuesta:", response.text)
 
-# Ejecutamos la prueba directa al cargar
-enviar_alerta_automatica_telegram("Prueba de diagnóstico de conexión")
+# === TEST FORZADO AUTOMÁTICO DE CONFIRMACIÓN ===
+# Borraremos estas dos líneas de abajo una vez que compruebes que suena tu móvil
+enviar_alerta_automatica_telegram("🚀 ¡Prueba de Red Exitosa! El servidor y tu Telegram están vinculados sin errores.")
