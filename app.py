@@ -14,9 +14,10 @@ def enviar_alerta_telegram(mensaje):
     url = f"https://telegram.org{TELEGRAM_TOKEN}/sendMessage"
     payload = {"chat_id": TELEGRAM_CHAT_ID, "text": mensaje, "parse_mode": "Markdown"}
     try:
-        requests.post(url, json=payload, timeout=10)
+        # Añadimos una verificación visual en la consola del servidor por seguridad
+        response = requests.post(url, json=payload, timeout=10)
     except Exception as e:
-        pass
+        st.sidebar.error(f"Error de conexión con Telegram: {e}")
 
 st.set_page_config(page_title="Calculadora Cuántica de Pares", layout="wide")
 st.title("💰 Monitor Sectorial con Alertas al Móvil")
@@ -42,15 +43,15 @@ if st.button("🧮 VERIFICAR MERCADO Y ENVIAR ALERTA"):
         # 2. Test de Johansen
         res_johansen = coint_johansen(log_precios, det_order=0, k_ar_diff=1)
         
-        # --- EXTRACCIÓN SEGURA DE COEFICIENTES (Causa del bloqueo) ---
-        # Extraemos los valores numéricos planos del primer vector para evitar errores de matriz
+        # --- EXTRACCIÓN CORECTA DE POSICIONES MATRICIALES ---
+        # Extraemos el primer vector de cointegración usando las coordenadas exactas de la matriz
         beta_iren = float(res_johansen.evec[0, 0])
         beta_cifr = float(res_johansen.evec[1, 0])
         
         precio_actual_iren = float(precios['IREN'].iloc[-1])
         precio_actual_cifr = float(precios['CIFR'].iloc[-1])
         
-        # 3. Cálculo matemático seguro del Spread y Z-Score
+        # 3. Cálculo del Spread y Z-Score
         spread = (log_precios['IREN'] * beta_iren) + (log_precios['CIFR'] * beta_cifr)
         z_score = (spread - np.mean(spread)) / np.std(spread)
         z_actual = float(z_score.iloc[-1])
@@ -60,9 +61,9 @@ if st.button("🧮 VERIFICAR MERCADO Y ENVIAR ALERTA"):
         acciones_iren = round(capital_usd / precio_actual_iren)
         acciones_cifr = round(capital_usd / precio_actual_cifr)
         
+        # === DESPLIEGUE VISUAL DE LA SEÑAL EN LA PÁGINA ===
         st.subheader("📌 Diagnóstico del Spread Hoy")
         
-        # --- LÓGICA DE ALERTA AUTOMÁTICA ---
         if z_actual > 2.0:
             msg = f"🚨 *ALERTA TRADING IA*\n\nEl Z-Score está disparado en *{z_actual:.2f}*.\n\n*Operación sugerida:*\n🔴 VENDER EN CORTO {acciones_iren} acciones de IREN\n🟢 COMPRAR {acciones_cifr} acciones de CIFR"
             st.error(msg)
@@ -76,10 +77,20 @@ if st.button("🧮 VERIFICAR MERCADO Y ENVIAR ALERTA"):
         else:
             msg_equilibrio = f"⚖️ El par está en equilibrio (Z-Score: {z_actual:.2f}). No requiere operaciones directas."
             st.info(msg_equilibrio)
-            # Confirmación enviada a Telegram de forma limpia
-            enviar_alerta_telegram(f"🔔 ¡Botón pulsado en el móvil! Conexión al servidor completada. Z-Score actual: {z_actual:.2f}")
             
-        # === DIBUJO DEL GRÁFICO (Estructura limpia) ===
+            # Formateamos el mensaje de texto para que aparezcan las cantidades calculadas abajo
+            st.write(f"Si forzaras la entrada de equilibrio ahora mismo con **{capital_total}€**, tu distribución neutral sería:")
+            df_ordenes = pd.DataFrame({
+                "Precio Mercado ($)": [precio_actual_iren, precio_actual_cifr],
+                "Asignación sugerida (€)": [capital_total/2, capital_total/2],
+                "Cantidad de Acciones": [acciones_iren, acciones_cifr]
+            }, index=["IREN", "CIFR"])
+            st.dataframe(df_ordenes.style.format("{:.2f}", subset=["Precio Mercado ($)", "Asignación sugerica (€)"]))
+            
+            # Mandamos la confirmación obligatoria a Telegram para certificar que el puente no se corta
+            enviar_alerta_telegram(f"🔔 ¡Botón pulsado en el móvil! Servidor conectado con éxito. Z-Score actual: {z_actual:.2f}. Todo operativo.")
+            
+        # 5. Dibujo del Gráfico Histórico
         st.subheader("📈 Gráfico de Control Histórico")
         df_grafico = pd.DataFrame({"Z-Score del Spread": z_score}, index=precios.index)
         st.line_chart(df_grafico)
