@@ -12,7 +12,6 @@ st.title("🤖 Escáner de Arbitraje IA Automatizado (24/7)")
 st.write("El servidor se auto-ejecuta cada hora en segundo plano y te alertará al móvil ante ineficiencias.")
 
 # CONFIGURACIÓN AUTOMÁTICA DEL TEMPORIZADOR (3600 segundos = 1 Hora)
-# Este contador obliga a la nube a despertarse sola y re-analizar todo el sector
 st_autorefresh(interval=3600 * 1000, key="cron_trading_ia")
 
 st.sidebar.header("⚙️ Parámetros del Algoritmo")
@@ -56,12 +55,14 @@ if not datos.empty:
             log_precios = np.log(df_par)
             
             res_joh = coint_johansen(log_precios, det_order=0, k_ar_diff=1)
-            estadistico_traza = float(res_joh.lr1)
-            valor_critico = float(res_joh.cvt) # 90% confianza intradiaria
+            
+            # --- CORRECCIÓN DEFINITIVA DE INDEXACIÓN (Rango r=0) ---
+            estadistico_traza = float(res_joh.lr1[0]) # Tomamos el primer elemento del array
+            valor_critico = float(res_joh.cvt[0, 0])   # Fila 0 (r=0), Columna 0 (90% Confianza)
             
             if estadistico_traza > valor_critico:
-                beta_t1 = float(res_joh.evec)
-                beta_t2 = float(res_joh.evec)
+                beta_t1 = float(res_joh.evec[0, 0])
+                beta_t2 = float(res_joh.evec[1, 0])
                 
                 spread = (log_precios[t1] * beta_t1) + (log_precios[t2] * beta_t2)
                 z_score = (spread - np.mean(spread)) / np.std(spread)
@@ -82,7 +83,7 @@ if resultados_globales:
     df_ranking = pd.DataFrame(resultados_globales).sort_values(by="Fuerza", ascending=False).set_index("Par")
     st.dataframe(df_ranking)
     
-    # PROCESAMIENTO SILENCIOSO DE ALERTAS CRÍTICAS (El bot te avisa solo si hay señal)
+    # PROCESAMIENTO SILENCIOSO DE ALERTAS CRÍTICAS
     for par, info in diccionario_detalles.items():
         z_verificar = info["z"]
         capital_usd = (capital_total / 2.0) * 1.10
@@ -90,9 +91,9 @@ if resultados_globales:
         acc_t2 = round(capital_usd / info["p2"])
         ganancia_est = capital_total * (objetivo_rendimiento / 100.0)
         
-        # Si el spread se sale de los márgenes (>2), el bot te manda un mensaje de inmediato sin pulsar nada
+        # Si el spread se sale de los márgenes (>2), el bot te manda un mensaje de inmediato
         if z_verificar > 2.0:
-            msg = f"🚨 *ALERTA DE TRADING IA ACTIVADA*\n\nEl par *{par}* se ha desviado a un Z-Score crítico de *{z_verificar:.2f}*.\n\n*Plan de Acción Directo:*\n🔴 VENDER CORTO {acc_t1} acciones de {info['t1']}\n🟢 COMPRAR {acc_t2} acciones de {info['t2']}\n\n🎯 *Objetivo:* +{ganancia_est:.2f}€ (Cierre en Z=0)\n⚠️ *Stop Loss definitivo:* Z=3.50"
+            msg = f"🚨 *ALERTA DE TRADING IA ACTIVADA*\n\nEl par *{par}* se ha desviado a un Z-Score crítico de *{z_verificar:.2f}*.\n\n*Plan de Acción Directo:*\n🔴 VENDER EN CORTO {acc_t1} acciones de {info['t1']}\n🟢 COMPRAR {acc_t2} acciones de {info['t2']}\n\n🎯 *Objetivo:* +{ganancia_est:.2f}€ (Cierre en Z=0)\n⚠️ *Stop Loss definitivo:* Z=3.50"
             enviar_alerta_automatica_telegram(msg)
             st.error(f"🚨 ALERTA DISPARADA EN: {par}")
             
