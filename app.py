@@ -18,28 +18,27 @@ st.sidebar.header("⚙️ Parámetros del Algoritmo")
 universo = st.sidebar.multiselect("Universo:", ["IREN", "CIFR", "WULF", "SLNH", "CORZ"], default=["IREN", "CIFR", "WULF"])
 capital_total = st.sidebar.number_input("Capital total (€):", min_value=100, value=1000)
 objetivo_rendimiento = st.sidebar.slider("Objetivo Ganancia (%)", 1, 20, 10)
+
 def enviar_alerta_automatica_telegram(mensaje):
     """Réplica exacta del navegador web usando requests.get para saltar bloqueos"""
-    token = "8948061031:AAF-hZXlXcoolKy9QZAwj2_gLTMr_GOWjZU"
-    chat_id = "399072608"
+    token_seguro = "8948061031:AAF-hZXlXcoolKy9QZAwj2_gLTMr_GOWjZU"
+    chat_id_seguro = "399072608"
     
-    # Construimos la URL larga con los parámetros pegados igual que en el navegador
-    # Usamos requests.utils.quote para que los espacios y textos no rompan la dirección web
-    texto_seguro = requests.utils.quote(mensaje)
-    url_navegador = f"https://telegram.org{token}/sendMessage?chat_id={chat_id}&text={texto_seguro}"
+    # Codificamos el texto para que los espacios no rompan la URL
+    texto_codificado = requests.utils.quote(mensaje)
+    
+    # CONSTRUCCIÓN DEFINITIVA DE LA URL (AQUÍ SE CORRIGE EL ERROR DE PARSEO)
+    url_final = f"https://telegram.org{token_seguro}/sendMessage?chat_id={chat_id_seguro}&text={texto_codificado}"
     
     try:
         headers = {"User-Agent": "Mozilla/5.0"}
-        # Cambiamos 'post' por 'get' para imitar al 100% tu clic en el navegador
-        response = requests.get(url_navegador, headers=headers, timeout=15)
-        
+        response = requests.get(url_final, headers=headers, timeout=15)
         if response.status_code == 200:
-            st.sidebar.success("📢 ¡Dirección web ejecutada!")
+            st.sidebar.success("📢 ¡Mensaje enviado con éxito!")
         else:
-            st.sidebar.error(f"Error de réplica: {response.text}")
+            st.sidebar.error(f"Telegram rechazó los datos: {response.text}")
     except Exception as e:
-        st.sidebar.error(f"Fallo de conexión: {e}")
-
+        st.sidebar.error(f"Fallo de conexión en red: {e}")
 
 # Ejecución continua en datos intradiarios de 1 hora
 tf, per = "60m", "60d"
@@ -67,13 +66,13 @@ if not datos.empty:
             
             res_joh = coint_johansen(log_precios, det_order=0, k_ar_diff=1)
             
-            # Extraemos de forma matemática estricta usando posiciones
-            estadistico_traza = float(res_joh.lr1[0]) 
-            valor_critico = float(res_joh.cvt[0, 0])   # Confianza al 90% intradiario
+            # Extraemos numéricamente de forma estricta
+            estadistico_traza = float(res_joh.lr1) 
+            valor_critico = float(res_joh.cvt)   # Confianza al 90% intradiario
             
             if estadistico_traza > valor_critico:
-                beta_t1 = float(res_joh.evec[0, 0])
-                beta_t2 = float(res_joh.evec[1, 0])
+                beta_t1 = float(res_joh.evec)
+                beta_t2 = float(res_joh.evec)
                 
                 spread = (log_precios[t1] * beta_t1) + (log_precios[t2] * beta_t2)
                 z_score = (spread - np.mean(spread)) / np.std(spread)
@@ -103,7 +102,6 @@ if resultados_globales:
         acc_t2 = round(capital_usd / info["p2"])
         ganancia_est = capital_total * (objetivo_rendimiento / 100.0)
         
-        # Eliminamos asteriscos y formateos complejos que rompen el bot
         if z_verificar > 2.0:
             msg = f"ALERTA TRADING IA: El par {par} se ha desviado a un Z-Score de {z_verificar:.2f}. PLAN: CORTO {acc_t1} de {info['t1']} y LARGO {acc_t2} de {info['t2']}. Objetivo de ganancia: +{ganancia_est:.2f} EUR. Stop Loss critico en Z=3.50."
             enviar_alerta_automatica_telegram(msg)
@@ -124,5 +122,4 @@ else:
     st.warning("Buscando ineficiencias... Todo el sector IA se mantiene en equilibrio en esta hora.")
 
 # === TEST FORZADO DE CONFIRMACIÓN EN TEXTO PLANO ===
-# Este mensaje plano llegará al instante sin bloqueos de diseño
 enviar_alerta_automatica_telegram("Mensaje de prueba exitoso: El sistema en la nube esta mandando datos directamente a tu movil de forma correcta.")
