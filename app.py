@@ -27,7 +27,7 @@ def enviar_alerta_automatica_telegram(mensaje):
     # Codificamos el texto para que los espacios no rompan la URL
     texto_codificado = requests.utils.quote(mensaje)
     
-    # CONSTRUCCIÓN DEFINITIVA DE LA URL (AQUÍ SE CORRIGE EL ERROR DE PARSEO)
+    # Construcción limpia de la URL de la API de Telegram
     url_final = f"https://telegram.org{token_seguro}/sendMessage?chat_id={chat_id_seguro}&text={texto_codificado}"
     
     try:
@@ -66,13 +66,15 @@ if not datos.empty:
             
             res_joh = coint_johansen(log_precios, det_order=0, k_ar_diff=1)
             
-            # Extraemos numéricamente de forma estricta
-            estadistico_traza = float(res_joh.lr1) 
-            valor_critico = float(res_joh.cvt)   # Confianza al 90% intradiario
+            # --- SOLUCIÓN EXTRICTA A LAS LISTAS MATRICIALES (Línea 70) ---
+            # Extraemos el índice 0 para quedarnos con el número plano del rango r=0
+            estadistico_traza = float(res_joh.lr1[0]) 
+            valor_critico = float(res_joh.cvt[0, 0])   # Fila 0 (r=0), Columna 0 (90% Confianza intradiaria)
             
             if estadistico_traza > valor_critico:
-                beta_t1 = float(res_joh.evec)
-                beta_t2 = float(res_joh.evec)
+                # Extraemos las coordenadas específicas del primer autovector
+                beta_t1 = float(res_joh.evec[0, 0])
+                beta_t2 = float(res_joh.evec[1, 0])
                 
                 spread = (log_precios[t1] * beta_t1) + (log_precios[t2] * beta_t2)
                 z_score = (spread - np.mean(spread)) / np.std(spread)
