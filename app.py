@@ -47,7 +47,7 @@ if st.sidebar.button("🚀 INICIAR ESCANEO SECTORIAL"):
         datos = yf.download(tickers=" ".join(universo), period=per, interval=tf)
         
         if not datos.empty:
-            # Aplanamos el Multi-Index de yfinance de forma segura para no romper las columnas
+            # Aplanamos el Multi-Index de yfinance de forma segura
             if isinstance(datos.columns, pd.MultiIndex):
                 precios_totales = datos.xs('Close', axis=1, level=0).dropna()
             else:
@@ -66,22 +66,23 @@ if st.sidebar.button("🚀 INICIAR ESCANEO SECTORIAL"):
                     
                     log_precios = np.log(df_par)
                     
-                    # Ejecutamos el Test de Cointegration de Johansen
+                    # Ejecutamos el Test de Cointegración de Johansen
                     res_joh = coint_johansen(log_precios, det_order=0, k_ar_diff=1)
-                    estadistico_traza = res_joh.lr1
                     
-                    # FILTRO DINÁMICO DE CONFIANZA ECONOMÉTRICA
+                    # --- EXTRACCIÓN EXTRAESTRICTA DE VALORES CRÍTICOS (Solución al ValueError) ---
+                    estadistico_traza = float(res_joh.lr1[0]) # Extraemos el valor del rango r=0
+                    
                     if tf == "1d":
-                        valor_critico = res_joh.cvt  # Confianza al 95%
+                        valor_critico = float(res_joh.cvt[0, 1])  # Columna 1 = Confianza al 95%
                         criterio_texto = "95% Confianza (Macro)"
                     else:
-                        valor_critico = res_joh.cvt  # Confianza al 90%
+                        valor_critico = float(res_joh.cvt[0, 0])  # Columna 0 = Confianza al 90%
                         criterio_texto = "90% Confianza (Intradía)"
                         
                     esta_coint = estadistico_traza > valor_critico
                     
                     if esta_coint:
-                        # Coordenadas matriciales fijas e indexadas
+                        # Coordenadas matriciales fijas de los autovectores
                         beta_t1 = float(res_joh.evec[0, 0])
                         beta_t2 = float(res_joh.evec[1, 0])
                         
