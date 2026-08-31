@@ -18,31 +18,28 @@ st.sidebar.header("⚙️ Parámetros del Algoritmo")
 universo = st.sidebar.multiselect("Universo:", ["IREN", "CIFR", "WULF", "SLNH", "CORZ"], default=["IREN", "CIFR", "WULF"])
 capital_total = st.sidebar.number_input("Capital total (€):", min_value=100, value=1000)
 objetivo_rendimiento = st.sidebar.slider("Objetivo Ganancia (%)", 1, 20, 10)
-
 def enviar_alerta_automatica_telegram(mensaje):
-    """Manda notificaciones al móvil con una estructura de URL blindada contra errores de sintaxis"""
-    # Separamos el prefijo 'bot' del código para evitar errores de interpretación del servidor
+    """Réplica exacta del navegador web usando requests.get para saltar bloqueos"""
     token = "8948061031:AAF-hZXlXcoolKy9QZAwj2_gLTMr_GOWjZU"
     chat_id = "399072608"
     
-    # Construcción limpia de la URL sin caracteres cruzados
-    url_base = "https://telegram.org"
-    url_final = url_base + "/bot" + token + "/sendMessage"
-    
-    payload = {"chat_id": str(chat_id), "text": mensaje, "parse_mode": "Markdown"}
+    # Construimos la URL larga con los parámetros pegados igual que en el navegador
+    # Usamos requests.utils.quote para que los espacios y textos no rompan la dirección web
+    texto_seguro = requests.utils.quote(mensaje)
+    url_navegador = f"https://telegram.org{token}/sendMessage?chat_id={chat_id}&text={texto_seguro}"
     
     try:
-        # Añadimos un agente de usuario estándar para que parezca una petición web normal de navegador
         headers = {"User-Agent": "Mozilla/5.0"}
-        response = requests.post(url_final, data=payload, headers=headers, timeout=15)
+        # Cambiamos 'post' por 'get' para imitar al 100% tu clic en el navegador
+        response = requests.get(url_navegador, headers=headers, timeout=15)
         
-        # Mostramos el diagnóstico de éxito en la barra lateral en silencio para validar
         if response.status_code == 200:
-            st.sidebar.success("📢 Mensaje enviado con éxito")
+            st.sidebar.success("📢 ¡Dirección web ejecutada!")
         else:
-            st.sidebar.error(f"Telegram rechazó los datos: {response.text}")
+            st.sidebar.error(f"Error de réplica: {response.text}")
     except Exception as e:
-        st.sidebar.error(f"Error de red: {e}")
+        st.sidebar.error(f"Fallo de conexión: {e}")
+
 
 # Ejecución continua en datos intradiarios de 1 hora
 tf, per = "60m", "60d"
