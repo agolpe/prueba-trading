@@ -10,8 +10,7 @@ TELEGRAM_TOKEN = "8948061031:AAF-hZXlXcoolKy9QZAwj2_gLTMr_GOWjZU"
 TELEGRAM_CHAT_ID = "399072608"
 
 def enviar_alerta_telegram(mensaje):
-    """Función corregida para mandar mensajes automáticos al móvil"""
-    # Se añade 'api.' al inicio y '/bot' antes del token para cumplir la regla oficial de Telegram
+    """Manda el mensaje a tu móvil usando la ruta oficial de la API"""
     url = f"https://telegram.org{TELEGRAM_TOKEN}/sendMessage"
     payload = {"chat_id": TELEGRAM_CHAT_ID, "text": mensaje, "parse_mode": "Markdown"}
     try:
@@ -21,31 +20,42 @@ def enviar_alerta_telegram(mensaje):
 
 st.set_page_config(page_title="Calculadora Cuántica de Pares", layout="wide")
 st.title("💰 Monitor Sectorial con Alertas al Móvil")
-st.write("Tu servidor está conectado de forma continua. Presiona el botón para verificar alertas.")
+st.write("Tu servidor está conectado a Yahoo Finance. Presiona el botón para escanear.")
 
 capital_total = st.sidebar.number_input("Capital total a invertir (€):", min_value=100, value=1000)
 
 if st.button("🧮 VERIFICAR MERCADO Y ENVIAR ALERTA"):
     st.info("Escaneando mercado actual...")
     
+    # Descargamos los datos históricos
     datos = yf.download(tickers="IREN CIFR", period="1y", interval="1d")
     
     if not datos.empty:
-        precios = datos['Close'].dropna()
+        # --- SOLUCIÓN AL MULTI-INDEX DE YFINANCE ---
+        # Si Yahoo Finance entrega las columnas agrupadas, las aplanamos
+        if isinstance(datos.columns, pd.MultiIndex):
+            # Nos quedamos solo con las filas que pertenecen al precio de Cierre ('Close')
+            precios = datos.xs('Close', axis=1, level=0).dropna()
+        else:
+            precios = datos['Close'].dropna()
+            
         log_precios = np.log(precios)
         
-        # Matemáticas del Spread y Z-Score
+        # Matemáticas del Spread y Z-Score con Johansen
         res_johansen = coint_johansen(log_precios, det_order=0, k_ar_diff=1)
-        beta_iren = res_johansen.evec[0, 0]
-        beta_cifr = res_johansen.evec[1, 0]
+        
+        # Extraemos el primer vector de cointegración (Hedge Ratio)
+        beta = res_johansen.evec[:, 0]
         
         precio_actual_iren = float(precios['IREN'].iloc[-1])
         precio_actual_cifr = float(precios['CIFR'].iloc[-1])
         
-        spread = (log_precios['IREN'] * beta_iren) + (log_precios['CIFR'] * beta_cifr)
+        # Calculamos el spread dinámico exacto
+        spread = (log_precios['IREN'] * beta[0]) + (log_precios['CIFR'] * beta[1])
         z_score = (spread - np.mean(spread)) / np.std(spread)
         z_actual = float(z_score.iloc[-1])
         
+        # Gestión de capital para los 1,000€ asignados
         capital_usd = (capital_total / 2.0) * 1.10 
         acciones_iren = round(capital_usd / precio_actual_iren)
         acciones_cifr = round(capital_usd / precio_actual_cifr)
@@ -64,15 +74,14 @@ if st.button("🧮 VERIFICAR MERCADO Y ENVIAR ALERTA"):
             enviar_alerta_telegram(msg)
             
         else:
-            st.info(f"⚖️ El par está en equilibrio (Z-Score: {z_actual:.2f}). No requiere operaciones.")
-            # Enviamos el mensaje de confirmación de equilibrio de forma corregida
-            enviar_alerta_telegram(f"✅ ¡Botón pulsado en Streamlit! El sistema está online. El Z-Score actual es de {z_actual:.2f}. Todo en orden.")
+            st.info(f"⚖️ El par está en equilibrio (Z-Score: {z_actual:.2f}). No requiere operaciones directas.")
+            # Confirmación forzada para verificar que el servidor y el bot se comunican
+            enviar_alerta_telegram(f"🔔 ¡Botón pulsado! Servidor conectado con éxito. El Z-Score de equilibrio es {z_actual:.2f}.")
             
-        # === SOLUCIÓN AL GRÁFICO DE CONTROL ===
+        # === GRÁFICO DE CONTROL AJUSTADO ===
         st.subheader("📈 Gráfico de Control Histórico")
-        # Forzamos la estructura de tabla limpia ordenando por fechas reales
         df_grafico = pd.DataFrame({"Z-Score del Spread": z_score}, index=precios.index)
         st.line_chart(df_grafico)
         
     else:
-        st.error("No se pudieron obtener datos.")
+        st.error("No se pudieron obtener datos desde los servidores de Yahoo Finance.")
