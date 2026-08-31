@@ -2,31 +2,15 @@ import streamlit as st
 import yfinance as yf
 import numpy as np
 import pandas as pd
-import requests
 from statsmodels.tsa.vector_ar.vecm import coint_johansen
 
-def enviar_alerta_telegram(mensaje):
-    """Lee las credenciales guardadas de forma nativa en los secretos del servidor"""
-    try:
-        # Obtenemos los tokens desde los Secrets seguros de Streamlit Cloud
-        token = st.secrets["TELEGRAM_TOKEN"]
-        chat_id = st.secrets["TELEGRAM_CHAT_ID"]
-        
-        url = f"https://telegram.org{token}/sendMessage"
-        payload = {"chat_id": str(chat_id), "text": mensaje, "parse_mode": "Markdown"}
-        
-        # Ejecutamos la petición de forma directa
-        requests.post(url, data=payload, timeout=10)
-    except Exception as e:
-        pass
-
 st.set_page_config(page_title="Calculadora Cuántica de Pares", layout="wide")
-st.title("💰 Monitor Sectorial con Alertas al Móvil")
+st.title("💰 Monitor Sectorial con Enlace de Alertas al Móvil")
 st.write("Tu servidor está conectado a Yahoo Finance. Presiona el botón para escanear.")
 
 capital_total = st.sidebar.number_input("Capital total a invertir (€):", min_value=100, value=1000)
 
-if st.button("🧮 VERIFICAR MERCADO Y ENVIAR ALERTA"):
+if st.button("🧮 VERIFICAR MERCADO Y GENERAR ÓRDENES"):
     st.info("Escaneando mercado actual...")
     
     # 1. Ingesta segura de datos
@@ -61,20 +45,27 @@ if st.button("🧮 VERIFICAR MERCADO Y ENVIAR ALERTA"):
         
         st.subheader("📌 Diagnóstico del Spread Hoy")
         
+        # Configuración base del enlace web de Telegram (Esquiva el bloqueo del servidor)
+        token_bot = "8948061031:AAF-hZXlXcoolKy9QZAwj2_gLTMr_GOWjZU"
+        chat_id_usuario = "399072608"
+        
         if z_actual > 2.0:
-            msg = f"🚨 *ALERTA TRADING IA*\n\nEl Z-Score está disparado en *{z_actual:.2f}*.\n\n*Operación sugerida:*\n🔴 VENDER EN CORTO {acciones_iren} de IREN\n🟢 COMPRAR {acciones_cifr} de CIFR"
-            st.error(msg)
-            enviar_alerta_telegram(msg)
+            texto_alerta = f"🚨 ALERTA TRADING IA %0A%0AEl Z-Score está disparado en {z_actual:.2f}.%0A%0A*Operación sugerida:*%0A🔴 VENDER EN CORTO {acciones_iren} de IREN%0A🟢 COMPRAR {acciones_cifr} de CIFR"
+            st.error(f"🚨 ALERTA ACTIVA: El Z-Score está en {z_actual:.2f}")
+            
+            # Botón web interactivo que hereda la URL que te dio "ok: true"
+            url_telegram = f"https://api.telegram.org/bot{token_bot}/sendMessage?chat_id={chat_id_usuario}&text={texto_alerta}"
+            st.link_button("📲 ENVIAR ORDEN AL MÓVIL", url_telegram)
             
         elif z_actual < -2.0:
-            msg = f"🚨 *ALERTA TRADING IA*\n\nEl Z-Score está hundido en *{z_actual:.2f}*.\n\n*Operación sugerida:*\n🟢 COMPRAR {acciones_iren} de IREN\n🔴 VENDER EN CORTO {acciones_cifr} de CIFR"
-            st.success(msg)
-            enviar_alerta_telegram(msg)
+            texto_alerta = f"🚨 ALERTA TRADING IA %0A%0AEl Z-Score está hundido en {z_actual:.2f}.%0A%0A*Operación sugerida:*%0A🟢 COMPRAR {acciones_iren} de IREN%0A🔴 VENDER EN CORTO {acciones_cifr} de CIFR"
+            st.success(f"🚨 ALERTA ACTIVA: El Z-Score está en {z_actual:.2f}")
+            
+            url_telegram = f"https://api.telegram.org/bot{token_bot}/sendMessage?chat_id={chat_id_usuario}&text={texto_alerta}"
+            st.link_button("📲 ENVIAR ORDEN AL MÓVIL", url_telegram)
             
         else:
-            msg_equilibrio = f"⚖️ El par está en equilibrio (Z-Score: {z_actual:.2f}). No requiere operaciones directas."
-            st.info(msg_equilibrio)
-            
+            st.info(f"⚖️ El par está en equilibrio (Z-Score: {z_actual:.2f}). No requiere operaciones directas.")
             st.write(f"Si forzaras la entrada de equilibrio ahora mismo con **{capital_total}€**, tu distribución neutral sería:")
             
             df_ordenes = pd.DataFrame({
@@ -82,11 +73,12 @@ if st.button("🧮 VERIFICAR MERCADO Y ENVIAR ALERTA"):
                 "Asignación sugerida (€)": [capital_total / 2, capital_total / 2],
                 "Cantidad de Acciones": [acciones_iren, acciones_cifr]
             }, index=["IREN", "CIFR"])
-            
             st.dataframe(df_ordenes)
             
-            # MANDAMOS EL MENSAJE DE EQUILIBRIO FORZADO DESDE LOS SECRETOS SEGUROS
-            enviar_alerta_telegram(f"🔔 ¡Botón pulsado en el móvil! Servidor en la nube conectado con éxito. Z-Score actual de equilibrio: {z_actual:.2f}.")
+            # Enviamos un enlace de prueba de equilibrio
+            texto_prueba = f"🔔 Sistema Online. El par IREN/CIFR está balanceado hoy (Z-Score: {z_actual:.2f})."
+            url_telegram = f"https://api.telegram.org/bot{token_bot}/sendMessage?chat_id={chat_id_usuario}&text={texto_prueba}"
+            st.link_button("📲 ENVIAR MENSAJE DE PRUEBA AL MÓVIL", url_telegram)
             
         # 5. Dibujo del Gráfico Histórico
         st.subheader("📈 Gráfico de Control Histórico")
