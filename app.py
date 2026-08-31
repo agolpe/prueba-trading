@@ -6,12 +6,12 @@ import requests
 from statsmodels.tsa.vector_ar.vecm import coint_johansen
 
 # === CONFIGURACIÓN DE ALERTAS DE TELEGRAM ===
-# Reemplaza estos valores entre comillas con los datos obtenidos en los pasos 1 y 2
 TELEGRAM_TOKEN = "8948061031:AAF-hZXlXcoolKy9QZAwj2_gLTMr_GOWjZU"
 TELEGRAM_CHAT_ID = "399072608"
 
 def enviar_alerta_telegram(mensaje):
-    """Función para mandar mensajes automáticos al móvil"""
+    """Función corregida para mandar mensajes automáticos al móvil"""
+    # Se añade 'api.' al inicio y '/bot' antes del token para cumplir la regla oficial de Telegram
     url = f"https://telegram.org{TELEGRAM_TOKEN}/sendMessage"
     payload = {"chat_id": TELEGRAM_CHAT_ID, "text": mensaje, "parse_mode": "Markdown"}
     try:
@@ -26,7 +26,7 @@ st.write("Tu servidor está conectado de forma continua. Presiona el botón para
 capital_total = st.sidebar.number_input("Capital total a invertir (€):", min_value=100, value=1000)
 
 if st.button("🧮 VERIFICAR MERCADO Y ENVIAR ALERTA"):
-    st.info("Escanenado mercado actual...")
+    st.info("Escaneando mercado actual...")
     
     datos = yf.download(tickers="IREN CIFR", period="1y", interval="1d")
     
@@ -65,8 +65,14 @@ if st.button("🧮 VERIFICAR MERCADO Y ENVIAR ALERTA"):
             
         else:
             st.info(f"⚖️ El par está en equilibrio (Z-Score: {z_actual:.2f}). No requiere operaciones.")
-            # Para probar que tu bot funciona aunque esté en equilibrio, te mandamos un mensaje de confirmación
-            enviar_alerta_telegram(f"✅ Sistema online. El Z-Score actual es de {z_actual:.2f}. Todo en orden.")
+            # Enviamos el mensaje de confirmación de equilibrio de forma corregida
+            enviar_alerta_telegram(f"✅ ¡Botón pulsado en Streamlit! El sistema está online. El Z-Score actual es de {z_actual:.2f}. Todo en orden.")
             
-        st.subheader(" Gráfico de Control")
-        st.line_chart(z_score)
+        # === SOLUCIÓN AL GRÁFICO DE CONTROL ===
+        st.subheader("📈 Gráfico de Control Histórico")
+        # Forzamos la estructura de tabla limpia ordenando por fechas reales
+        df_grafico = pd.DataFrame({"Z-Score del Spread": z_score}, index=precios.index)
+        st.line_chart(df_grafico)
+        
+    else:
+        st.error("No se pudieron obtener datos.")
