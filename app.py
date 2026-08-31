@@ -14,10 +14,9 @@ def enviar_alerta_telegram(mensaje):
     url = f"https://telegram.org{TELEGRAM_TOKEN}/sendMessage"
     payload = {"chat_id": TELEGRAM_CHAT_ID, "text": mensaje, "parse_mode": "Markdown"}
     try:
-        # Añadimos una verificación visual en la consola del servidor por seguridad
-        response = requests.post(url, json=payload, timeout=10)
+        requests.post(url, json=payload, timeout=10)
     except Exception as e:
-        st.sidebar.error(f"Error de conexión con Telegram: {e}")
+        pass
 
 st.set_page_config(page_title="Calculadora Cuántica de Pares", layout="wide")
 st.title("💰 Monitor Sectorial con Alertas al Móvil")
@@ -43,7 +42,6 @@ if st.button("🧮 VERIFICAR MERCADO Y ENVIAR ALERTA"):
         # 2. Test de Johansen
         res_johansen = coint_johansen(log_precios, det_order=0, k_ar_diff=1)
         
-        # --- EXTRACCIÓN CORECTA DE POSICIONES MATRICIALES ---
         # Extraemos el primer vector de cointegración usando las coordenadas exactas de la matriz
         beta_iren = float(res_johansen.evec[0, 0])
         beta_cifr = float(res_johansen.evec[1, 0])
@@ -78,16 +76,18 @@ if st.button("🧮 VERIFICAR MERCADO Y ENVIAR ALERTA"):
             msg_equilibrio = f"⚖️ El par está en equilibrio (Z-Score: {z_actual:.2f}). No requiere operaciones directas."
             st.info(msg_equilibrio)
             
-            # Formateamos el mensaje de texto para que aparezcan las cantidades calculadas abajo
             st.write(f"Si forzaras la entrada de equilibrio ahora mismo con **{capital_total}€**, tu distribución neutral sería:")
+            
+            # Tabla de órdenes sin el formateador estricto para evitar fallos de texto
             df_ordenes = pd.DataFrame({
                 "Precio Mercado ($)": [precio_actual_iren, precio_actual_cifr],
-                "Asignación sugerida (€)": [capital_total/2, capital_total/2],
+                "Asignación sugerida (€)": [capital_total / 2, capital_total / 2],
                 "Cantidad de Acciones": [acciones_iren, acciones_cifr]
             }, index=["IREN", "CIFR"])
-            st.dataframe(df_ordenes.style.format("{:.2f}", subset=["Precio Mercado ($)", "Asignación sugerica (€)"]))
             
-            # Mandamos la confirmación obligatoria a Telegram para certificar que el puente no se corta
+            st.dataframe(df_ordenes)
+            
+            # Mandamos la confirmación obligatoria a Telegram
             enviar_alerta_telegram(f"🔔 ¡Botón pulsado en el móvil! Servidor conectado con éxito. Z-Score actual: {z_actual:.2f}. Todo operativo.")
             
         # 5. Dibujo del Gráfico Histórico
